@@ -15,12 +15,12 @@ type Input = { userInput:UserInput, dimensions:(Int, Int) }
 data Symbol = X | O | E
 data Solution = H1 | H2 | H3 | V1 | V2 | V3 | D1 | D2
 
-type Board = [Symbol]
+type Board = [(Int, Symbol)]
 type Solutions = [Solution]
 type GameState = {board: Board, player : Symbol, solutions : Solutions}
 
 defaultGame : GameState
-defaultGame = {board = [E, E, E, E, E, E, E, E, E], player = O, solutions = []}
+defaultGame = {board = [(0,E), (1,E), (2,E), (3,E), (4,E), (5,E), (6,E), (7,E), (8,E)], player = O, solutions = []}
 
 updateBoard : GameState -> UserInput -> (Int, Int) -> GameState
 updateBoard gameState userInput (x, y) = 
@@ -32,10 +32,10 @@ updateBoard gameState userInput (x, y) =
       in
         case inSquare of
           -1 -> gameState
-          x -> let val = Array.get x (Array.fromList brd)
+          x -> let val = snd (head (filter (\(pos, symb) -> pos == x) brd))
                in 
                  case val of
-                   Just E -> {board = (Array.toList (Array.set x plyr (Array.fromList brd)))
+                   E -> {board = (x, plyr) :: (filter (\(pos, symb) -> pos /= x) brd)
                              , player = updatePlayer plyr
                              , solutions = []}
                    _ -> gameState
@@ -66,8 +66,7 @@ updatePlayer player = if player == O then X else O
 
 updateSolutions : GameState -> GameState
 updateSolutions gameState = let solList = [(0,1,2,H1), (3,4,5,H2), (6,7,8,H3), (0,3,6,V1), (1,4,7,V2), (2,5,8,V3),(0,4,8,D1), (2,4,6,D2)]
-                                indexedBoard = Array.toIndexedList (Array.fromList (gameState.board))
-                            in {board = gameState.board, player = gameState.player, solutions = concatMap (checkSolution indexedBoard) solList}
+                            in {board = gameState.board, player = gameState.player, solutions = concatMap (checkSolution gameState.board) solList}
 
 checkSolution : [(Int, Symbol)] -> (Int, Int, Int, Solution) -> [Solution]
 checkSolution board (x, y, z, sol) = let (indices, values) = unzip (filter (\(a, b) -> a == x || a == y || a == z) board)
@@ -125,7 +124,7 @@ display (w,h) {board, player, solutions} =
        , move (100,0) (rotate (degrees 90) gridLine)
        , move (0, -100) gridLine
        , move (0, 100) gridLine] ++
-       map fillTile (filter (\(x,y) -> y /= E) (Array.toIndexedList (Array.fromList board))) ++
+       map fillTile (filter (\(x,y) -> y /= E) board) ++
        map fillSolutions solutions)
 
 input = sampleOn Mouse.clicks (lift2 Input userInput Window.dimensions)
