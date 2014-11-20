@@ -4,16 +4,14 @@ import Window
 import Mouse
 import Array
 
-type UserInput = {posX:Int, posY:Int, pressed:Bool}
+type UserInput = {posX:Int, posY:Int}
 
 userInput : Signal UserInput
 userInput = UserInput <~ Mouse.x
                        ~ Mouse.y
-                       ~ Mouse.isDown
 
-type Input = { timeDelta:Float, userInput:UserInput, dimensions:(Int, Int) }
+type Input = { userInput:UserInput, dimensions:(Int, Int) }
 
-data State = Play | Stop
 data Symbol = X | O | E
 data Solution = H1 | H2 | H3 | V1 | V2 | V3 | D1 | D2
 
@@ -26,7 +24,7 @@ defaultGame = {board = [E, E, E, E, E, E, E, E, E], player = O, solutions = []}
 
 updateBoard : GameState -> UserInput -> (Int, Int) -> GameState
 updateBoard gameState userInput (x, y) = 
-    if userInput.pressed && isEmpty gameState.solutions
+    if isEmpty gameState.solutions
     then
       let inSquare = inBoardSquare userInput.posX userInput.posY (x, y)
           brd = gameState.board
@@ -80,7 +78,7 @@ checkSolution board (x, y, z, sol) = let (indices, values) = unzip (filter (\(a,
                                     else []
 
 stepGame : Input -> GameState -> GameState
-stepGame {timeDelta, userInput, dimensions} gameState = updateSolutions (updateBoard gameState userInput dimensions)
+stepGame {userInput, dimensions} gameState = updateSolutions (updateBoard gameState userInput dimensions)
 
 boardColor = yellow
 symbolColor = white
@@ -130,8 +128,7 @@ display (w,h) {board, player, solutions} =
        map fillTile (filter (\(x,y) -> y /= E) (Array.toIndexedList (Array.fromList board))) ++
        map fillSolutions solutions)
 
-delta = fps 30
-input = sampleOn delta (lift3 Input delta userInput Window.dimensions)
+input = sampleOn Mouse.clicks (lift2 Input userInput Window.dimensions)
 
 gameState = foldp stepGame defaultGame input
 
