@@ -2,7 +2,6 @@ module TicTacToe where
 
 import Window
 import Mouse
-import Array
 
 type UserInput = {posX:Int, posY:Int}
 
