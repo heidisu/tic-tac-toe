@@ -21,11 +21,14 @@ type GameState = {board: Board, player : Symbol, solutions : Solutions}
 defaultGame : GameState
 defaultGame = {board = [(0,E), (1,E), (2,E), (3,E), (4,E), (5,E), (6,E), (7,E), (8,E)], player = O, solutions = []}
 
-updateBoard : GameState -> UserInput -> (Int, Int) -> GameState
-updateBoard gameState userInput (x, y) = 
+solutions : [(Int, Int, Int, Solution)]
+solutions = [(0,1,2,H1), (3,4,5,H2), (6,7,8,H3), (0,3,6,V1), (1,4,7,V2), (2,5,8,V3),(0,4,8,D1), (2,4,6,D2)]
+
+stepGame : Input -> GameState -> GameState
+stepGame {userInput, dimensions} gameState = 
     if isEmpty gameState.solutions
     then
-      let inSquare = inBoardSquare userInput.posX userInput.posY (x, y)
+      let inSquare = inBoardSquare userInput.posX userInput.posY dimensions
           brd = gameState.board
           plyr = gameState.player
       in
@@ -34,9 +37,10 @@ updateBoard gameState userInput (x, y) =
           x -> let val = snd (head (filter (\(pos, symb) -> pos == x) brd))
                in 
                  case val of
-                   E -> {board = (x, plyr) :: (filter (\(pos, symb) -> pos /= x) brd)
-                             , player = updatePlayer plyr
-                             , solutions = []}
+                   E -> let newBoard = (x, plyr) :: (filter (\(pos, symb) -> pos /= x) brd)
+                        in {board = newBoard,
+                            player = updatePlayer plyr,
+                            solutions = concatMap (checkSolution newBoard) solutions}
                    _ -> gameState
     else gameState
      
@@ -63,10 +67,6 @@ findYpos midY y col =
 updatePlayer : Symbol -> Symbol
 updatePlayer player = if player == O then X else O
 
-updateSolutions : GameState -> GameState
-updateSolutions gameState = let solList = [(0,1,2,H1), (3,4,5,H2), (6,7,8,H3), (0,3,6,V1), (1,4,7,V2), (2,5,8,V3),(0,4,8,D1), (2,4,6,D2)]
-                            in {board = gameState.board, player = gameState.player, solutions = concatMap (checkSolution gameState.board) solList}
-
 checkSolution : [(Int, Symbol)] -> (Int, Int, Int, Solution) -> [Solution]
 checkSolution board (x, y, z, sol) = let (indices, values) = unzip (filter (\(a, b) -> a == x || a == y || a == z) board)
                                          symbols = filter (\x -> x /= E) values
@@ -74,9 +74,6 @@ checkSolution board (x, y, z, sol) = let (indices, values) = unzip (filter (\(a,
                                     if length symbols == 3 && length (filter (\x -> x == head symbols) symbols) == 3
                                     then [sol]
                                     else []
-
-stepGame : Input -> GameState -> GameState
-stepGame {userInput, dimensions} gameState = updateSolutions (updateBoard gameState userInput dimensions)
 
 boardColor = yellow
 symbolColor = white
@@ -104,7 +101,7 @@ fillTile (pos,val) =
       | val == X -> rect 100 100 |> filled symbolColor
                                  |> moveShape pos
 
-fillSolutions val = 
+fillSolution val = 
     case val of 
       H1 -> solutionLine |> move (0, 200)
       H2 -> solutionLine
@@ -124,7 +121,7 @@ display (w,h) {board, player, solutions} =
        , move (0, -100) gridLine
        , move (0, 100) gridLine] ++
        map fillTile (filter (\(x,y) -> y /= E) board) ++
-       map fillSolutions solutions)
+       map fillSolution solutions)
 
 input = sampleOn Mouse.clicks (lift2 Input userInput Window.dimensions)
 
